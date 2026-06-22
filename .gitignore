@@ -1,0 +1,12 @@
+# Ignore everything
+*
+
+# Keep these
+!frontend/
+!frontend/**
+
+!backend/
+!backend/**
+
+!README.md
+!.gitignore

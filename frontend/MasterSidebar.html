@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    /* CORPORATE BRUTALISM / BLUE, WHITE & BLACK */
+    :root { 
+      --bg: #f8fafc; 
+      --surface: #ffffff;
+      --text: #020617; 
+      --border: #020617; 
+      --primary: #1d4ed8; 
+      --danger: #b91c1c; 
+      --success: #15803d;
+      --admin: #4338ca;
+    }
+    body { font-family: 'Courier New', Courier, monospace; margin: 0; padding: 0; background: var(--bg); color: var(--text); }
+    .header { background: var(--text); color: white; padding: 1.5rem 1rem; text-align: left; font-weight: 900; letter-spacing: 1px; border-bottom: 4px solid var(--border); text-transform: uppercase; }
+    .tabs { display: flex; border-bottom: 2px solid var(--border); background: var(--surface); }
+    .tab { flex: 1; padding: 1rem; text-align: center; cursor: pointer; border-right: 2px solid var(--border); font-size: 0.9rem; font-weight: bold; background: #e0e0e0; color: #000000; text-transform: uppercase; }
+    .tab:last-child { border-right: none; }
+    .tab.active { background: var(--surface); color: var(--text); border-bottom: 4px solid var(--text); }
+    .content { padding: 1.5rem; }
+    .hidden { display: none !important; }
+    .card { background: var(--surface); padding: 1.5rem; border: 2px solid var(--border); box-shadow: 4px 4px 0px var(--border); margin-bottom: 1.5rem; }
+    h3 { margin-top: 0; text-transform: uppercase; font-weight: 900; border-bottom: 2px solid var(--text); padding-bottom: 0.5rem; }
+    .form-group { margin-bottom: 1.2rem; }
+    .form-group label { display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 0.5rem; text-transform: uppercase; }
+    .form-group input, .form-group select { width: 100%; padding: 0.8rem; border: 2px solid var(--border); border-radius: 0; box-sizing: border-box; font-family: inherit; font-size: 1rem; }
+    .btn { display: block; width: 100%; padding: 1rem; border: 2px solid var(--text); border-radius: 0; font-weight: 900; cursor: pointer; margin-bottom: 1rem; text-transform: uppercase; font-size: 1rem; font-family: inherit; transition: all 0.1s; background: var(--surface); color: var(--text); box-shadow: 4px 4px 0px var(--border); }
+    .btn:active { transform: translate(2px, 2px); box-shadow: none !important; }
+    .btn-primary { background: var(--primary); color: white; box-shadow: 4px 4px 0px var(--primary); }
+    .btn-danger { background: var(--danger); color: white; box-shadow: 4px 4px 0px var(--danger); }
+    .btn-success { background: var(--success); color: white; box-shadow: 4px 4px 0px var(--success); }
+    .btn-outline { background: var(--surface); color: var(--text); box-shadow: 4px 4px 0px var(--border); }
+    .btn-admin { background: var(--admin); color: white; box-shadow: 4px 4px 0px var(--admin); }
+    .loader { text-align: center; padding: 2rem; font-weight: bold; text-transform: uppercase; border: 2px dashed var(--border); }
+    p { margin: 0.5rem 0; font-size: 0.95rem; }
+    
+    /* TOAST NOTIFICATION */
+    .toast {
+      position: fixed; top: 1rem; left: 50%; transform: translateX(-50%); z-index: 9999;
+      padding: 1rem 1.5rem; border: 3px solid var(--border); font-weight: 900; 
+      text-transform: uppercase; box-shadow: 6px 6px 0px var(--border); transition: all 0.2s;
+    }
+    .toast.error { background: var(--danger); color: white; }
+    .toast.success { background: var(--success); color: white; }
+    .toast.info { background: var(--primary); color: white; }
+  </style>
+</head>
+<body>
+  <div id="toast" class="toast hidden"></div>
+  <div class="header" id="app-header">ROJGAARRECORD ERP</div>
+  
+  <!-- UNIVERSAL LOGIN/REGISTRATION VIEW -->
+  <div id="login-view">
+    <div class="tabs" style="margin-bottom: 1rem;">
+      <div class="tab active" id="tab-login-btn" onclick="toggleAuthMode('login')">LOGIN</div>
+      <div class="tab" id="tab-reg-btn" onclick="toggleAuthMode('register')">REGISTER</div>
+    </div>
+    
+    <div class="content">
+      <!-- LOGIN SECTION -->
+      <div class="card" id="auth-login-card">
+        <h3>System Authentication</h3>
+        <p style="font-size:0.8rem; margin-bottom:1rem;">Enter your User ID (e.g. WRK-001, CON-001, EMP-001, ADMIN)</p>
+        <div class="form-group"><label>User ID</label><input type="text" id="login-id" placeholder="ID..."></div>
+        
+        <div id="otp-section" class="hidden">
+          <button class="btn btn-outline" id="btn-gen-otp">GENERATE OTP</button>
+          <div class="form-group" style="margin-top:1.5rem;"><label>Authentication OTP</label><input type="text" id="login-otp" placeholder="XXXX"></div>
+        </div>
+        
+        <div id="admin-section" class="hidden">
+          <div class="form-group"><label>Admin Password</label><input type="password" id="login-pass" placeholder="Password..."></div>
+        </div>
+
+        <button class="btn btn-primary" id="btn-login" style="margin-top:1.5rem;">AUTHENTICATE</button>
+      </div>
+
+      <!-- REGISTRATION SECTION -->
+      <div class="card hidden" id="auth-reg-card">
+        <h3>New User Registration</h3>
+        <div class="form-group">
+          <label>Select Role</label>
+          <select id="reg-role" onchange="updateRegFields()">
+            <option value="worker">Worker</option>
+            <option value="contractor">Contractor</option>
+            <option value="employer">Employer</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Full Name</label><input type="text" id="reg-name" placeholder="John Doe"></div>
+        <div class="form-group"><label>Phone Number</label><input type="text" id="reg-phone" placeholder="9876543210" maxlength="10" oninput="this.value = this.value.replace(/[^0-9]/g, '')"></div>
+        <div class="form-group"><label>Date of Birth</label><input type="date" id="reg-dob"></div>
+        
+        <!-- Worker specific -->
+        <div id="reg-worker-fields">
+          <div class="form-group">
+            <label>Wage Type</label>
+            <select id="reg-wage"><option value="Daily">Daily</option><option value="Weekly">Weekly</option></select>
+          </div>
+          <div class="form-group">
+            <label>Skill / Trade</label>
+            <select id="reg-skill">
+              <option value="Mason">Mason</option>
+              <option value="Carpenter">Carpenter</option>
+              <option value="Plumber">Plumber</option>
+              <option value="Electrician">Electrician</option>
+              <option value="Helper">Helper</option>
+              <option value="Painter">Painter</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Employer specific -->
+        <div id="reg-emp-fields" class="hidden">
+          <div class="form-group"><label>GSTIN</label><input type="text" id="reg-gstin" placeholder="27AAAAA0000A1Z5"></div>
+        </div>
+
+        <button class="btn btn-success" id="btn-register" style="margin-top:1.5rem;">CONFIRM REGISTRATION</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- WORKER DASHBOARD -->
+  <div id="dashboard-worker" class="hidden role-dashboard">
+    <div class="tabs">
+      <div class="tab active" data-tab="w-tab-profile" onclick="switchTab('w-tab-profile', 'worker')">Profile</div>
+      <div class="tab" data-tab="w-tab-claims" onclick="switchTab('w-tab-claims', 'worker')">Claims Made</div>
+    </div>
+    <div class="content" id="w-tab-profile">
+      <h3>Identity Profile</h3>
+      <div id="w-profile-details" class="card"><div class="loader">Loading Profile...</div></div>
+      <button class="btn btn-primary" id="btn-w-history">Load Attendance View</button>
+      <button class="btn btn-outline btn-logout" style="margin-top:2rem;">Terminate Session</button>
+    </div>
+    <div class="content hidden" id="w-tab-claims">
+      <h3>File A Claim</h3>
+      <div class="card">
+        <p style="font-size: 0.8rem; margin-bottom: 1rem;">Claims require 2-way assertion. Select the contractor you worked under.</p>
+        <div class="form-group"><label>Contractor</label><select id="claim-contractor"><option value="">Select Contractor...</option></select></div>
+        <div class="form-group"><label>Site</label><select id="claim-site" disabled><option value="">Select Site...</option></select></div>
+        <div class="form-group"><label>Claim Type</label><select id="claim-type"><option value="UNPAID_WAGES">Unpaid Wages</option><option value="ATTENDANCE_DISPUTE">Attendance Dispute</option></select></div>
+        <div class="form-group"><label>Amount (₹)</label><input type="number" id="claim-amt" placeholder="0"></div>
+        <button class="btn btn-primary" id="btn-submit-claim">SUBMIT ASSERTION</button>
+      </div>
+      <button class="btn btn-outline" id="btn-w-claims">Load Claims Made View</button>
+    </div>
+  </div>
+
+  <!-- CONTRACTOR DASHBOARD -->
+  <div id="dashboard-contractor" class="hidden role-dashboard">
+    <div class="tabs">
+      <div class="tab active" data-tab="c-tab-ops" onclick="switchTab('c-tab-ops', 'contractor')">Operations</div>
+      <div class="tab" data-tab="c-tab-claims" onclick="switchTab('c-tab-claims', 'contractor')">Claims</div>
+    </div>
+    <div class="content" id="c-tab-ops">
+      <div id="c-profile-details" class="card"><div class="loader">Loading Profile...</div></div>
+      <div class="card" style="border-style: solid;">
+        <h3>Load Live Views</h3>
+        <button class="btn btn-primary" id="btn-c-workers">Active Workers</button>
+        <button class="btn btn-outline" id="btn-c-accounts">Accounts & Payments</button>
+        <button class="btn btn-outline" id="btn-c-history">Work History</button>
+      </div>
+
+      <div class="card">
+        <h3>Appoint / Clock In Worker</h3>
+        <div class="form-group"><label>Worker ID</label><input type="text" id="in-worker-id" placeholder="WRK-001"></div>
+        <div class="form-group"><label>Site</label><select id="in-site"></select></div>
+        <button class="btn btn-success" id="btn-clock-in">CLOCK IN (ATTENDANCE IN)</button>
+      </div>
+
+      <div class="card">
+        <h3>Clock Out / Pay Worker</h3>
+        <div class="form-group"><label>Worker ID</label><input type="text" id="pay-worker-id" placeholder="WRK-001"></div>
+        <div class="form-group"><label>Site</label><select id="pay-site"></select></div>
+        <div class="form-group"><label>Wage Amount (₹)</label><input type="number" id="pay-amt" placeholder="0"></div>
+        <button class="btn btn-outline" id="btn-req-pay-otp">REQUEST WORKER OTP</button>
+        <div id="div-pay-verify" class="hidden" style="margin-top: 1rem; border-top: 2px dashed var(--border); padding-top: 1rem;">
+          <div class="form-group"><label>Worker OTP</label><input type="text" id="pay-otp" placeholder="XXXX"></div>
+          <button class="btn btn-primary" id="btn-exec-pay">VERIFY & MARK OUT</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>EOD Signoff</h3>
+        <p style="font-size:0.8rem; font-weight: bold;">Certifies all workers have been paid for the day and no active disputes exist for this site.</p>
+        <div class="form-group"><label>Site</label><select id="signoff-site"></select></div>
+        <button class="btn btn-primary" id="btn-signoff">Execute Signoff Transaction</button>
+      </div>
+      <button class="btn btn-outline btn-logout" style="margin-top:2rem;">Terminate Session</button>
+    </div>
+    <div class="content hidden" id="c-tab-claims">
+      <div class="card">
+        <h3>Pending Assertions</h3>
+        <p style="font-size:0.85rem;">Claims asserted against you by workers requiring your resolution.</p>
+        <div id="active-claims-list"><div class="loader">Loading Claims...</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EMPLOYER DASHBOARD -->
+  <div id="dashboard-employer" class="hidden role-dashboard">
+    <div class="tabs">
+      <div class="tab active" data-tab="e-tab-manage" onclick="switchTab('e-tab-manage', 'employer')">Management</div>
+      <div class="tab" data-tab="e-tab-disputes" onclick="switchTab('e-tab-disputes', 'employer')">Disputes</div>
+    </div>
+    <div class="content" id="e-tab-manage">
+      <div class="card">
+        <h3>Load Live Views</h3>
+        <button class="btn btn-primary" id="btn-e-sites">Site Operations Overview</button>
+        <button class="btn btn-outline" id="btn-e-daily">Daily Attendance & Signoffs</button>
+      </div>
+      <div class="card">
+        <h3>Register Domain Site</h3>
+        <div class="form-group"><label>Site Name</label><input type="text" id="site-name"></div>
+        <div class="form-group"><label>Location Coordinates / Info</label><input type="text" id="site-loc"></div>
+        <div class="form-group"><label>Size (SqFt)</label><input type="number" id="site-size" placeholder="15000"></div>
+        <button class="btn btn-primary" id="btn-add-site">Commit Site Registration</button>
+      </div>
+      <div class="card">
+        <h3>Award Contractor Mandate</h3>
+        <div class="form-group"><label>Contractor ID</label><input type="text" id="e-con-id" placeholder="CON-001"></div>
+        <div class="form-group"><label>Assign to Site</label><select id="e-con-site"></select></div>
+        <button class="btn btn-primary" id="btn-award">Delegate Authority</button>
+      </div>
+      <button class="btn btn-outline btn-logout" style="margin-top:2rem;">Terminate Session</button>
+    </div>
+    <div class="content hidden" id="e-tab-disputes">
+      <div class="card">
+        <h3>Escalated Disputed Assertions</h3>
+        <p style="font-size:0.85rem; font-weight:bold;">Claims that Contractors have rejected. You have final authority to override and resolve these disputes.</p>
+        <div id="disputes-list"><div class="loader">Loading Disputes...</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN DASHBOARD -->
+  <div id="dashboard-admin" class="hidden role-dashboard">
+    <div class="content">
+      <div class="card">
+        <h3>Platform Telemetry</h3>
+        <p style="font-size:0.8rem; margin-bottom:1rem;">Generate and view live native data visualizations of the ecosystem without exposing PII or financial transactions.</p>
+        <button class="btn btn-primary" id="btn-a-overview">User Demographics Graph</button>
+        <button class="btn btn-outline" id="btn-a-disputes">Claims & Dispute Stats</button>
+      </div>
+      
+      <div class="card">
+        <h3>System Reset</h3>
+        <p style="font-size:0.8rem; font-weight:bold;">WARNING: Executes hard wipe on all DB sheets and broadcasts reset transaction to the ledger.</p>
+        <div class="form-group">
+          <label>Confirm phrase: "RESET_CONFIRM"</label>
+          <input type="text" id="wipe-confirm" placeholder="...">
+        </div>
+        <button class="btn btn-primary" id="btn-wipe">Execute Data Reset</button>
+      </div>
+
+      <button class="btn btn-outline btn-logout" style="margin-top:2rem;">Terminate Admin Session</button>
+    </div>
+  </div>
+
+  <script>
+    function getDDMMYY() {
+      const d = new Date();
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const yy = String(d.getFullYear()).slice(-2);
+      return `${dd}-${mm}-${yy}`;
+    }
+
+    function showToast(msg, type='info') {
+      const t = document.getElementById('toast');
+      t.innerText = msg;
+      t.className = 'toast ' + type;
+      t.classList.remove('hidden');
+      setTimeout(() => t.classList.add('hidden'), 3500);
+    }
+
+    function formatDate(val) {
+      if (!val || val === "-") return "-";
+      let d = new Date(Number(val));
+      if (isNaN(d.getTime())) d = new Date(val);
+      if (isNaN(d.getTime())) return val.toString();
+      let day = String(d.getDate()).padStart(2, '0');
+      let month = String(d.getMonth() + 1).padStart(2, '0');
+      let year = String(d.getFullYear()).substring(2);
+      return `${day}-${month}-${year}`;
+    }
+
+    const FALLBACK_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw-uVaK2jGf5ktlrwGZ_wG314oUJ7Xu2NaPihaRXohRONvSCjbJOr8lmvORnJ3cGOnO/exec";
+    const SCRIPT_URL = typeof "<?= SCRIPT_URL ?>" !== "undefined" && "<?= SCRIPT_URL ?>".startsWith("http") ? "<?= SCRIPT_URL ?>" : FALLBACK_SCRIPT_URL;
+
+    let state = { id: null, token: null, role: null, data: null, sitesForClaims: [] };
+
+    function fallbackPost(payload, resolve, reject) {
+      fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
+      .then(r => r.json()).then(res => {
+         if (res.error) reject(new Error(res.error));
+         else resolve(res);
+      }).catch(reject);
+    }
+
+    function callBackend(payload) {
+      return new Promise((resolve, reject) => {
+        if (typeof google !== 'undefined' && google.script && google.script.run) {
+           google.script.run.withSuccessHandler(res => {
+             if (res && res.error) reject(new Error(res.error));
+             else resolve(res);
+           }).withFailureHandler(err => {
+             console.warn("RPC Failed (likely Google Multi-Account bug), falling back to fetch...", err);
+             fallbackPost(payload, resolve, reject);
+           }).apiExecuteAction(payload);
+        } else {
+           fallbackPost(payload, resolve, reject);
+        }
+      });
+    }
+
+    function fetchDirect(role, id, token) {
+      return new Promise((resolve, reject) => {
+        const doFetch = () => {
+           fetch(`${SCRIPT_URL}?role=${role}&id=${id}&token=${token}`)
+           .then(r => r.json()).then(res => {
+              if (res.error) reject(new Error(res.error));
+              else resolve(res);
+           }).catch(reject);
+        };
+
+        if (typeof google !== 'undefined' && google.script && google.script.run) {
+           google.script.run.withSuccessHandler(res => {
+             if (res && res.error) doFetch();
+             else resolve(res);
+           }).withFailureHandler(err => {
+             console.warn("RPC Failed, falling back to fetch...", err);
+             doFetch();
+           }).fetchUserDataDirect(role, id, token);
+        } else {
+           doFetch();
+        }
+      });
+    }
+
+    window.onload = () => {
+      state.id = localStorage.getItem('rr_user_id');
+      state.token = localStorage.getItem('rr_session_token');
+      if (state.id && state.token) {
+        determineRole(state.id);
+        showDashboard(state.role);
+      }
+    };
+
+    function setAuthData(id, token) {
+      localStorage.setItem('rr_user_id', id);
+      localStorage.setItem('rr_session_token', token);
+    }
+    function clearAuthData() {
+      localStorage.removeItem('rr_user_id');
+      localStorage.removeItem('rr_session_token');
+    }
+
+    // --- Dynamic UI Toggle ---
+    window.toggleAuthMode = function(mode) {
+      document.getElementById('tab-login-btn').classList.remove('active');
+      document.getElementById('tab-reg-btn').classList.remove('active');
+      document.getElementById('auth-login-card').classList.add('hidden');
+      document.getElementById('auth-reg-card').classList.add('hidden');
+
+      if(mode === 'login') {
+        document.getElementById('tab-login-btn').classList.add('active');
+        document.getElementById('auth-login-card').classList.remove('hidden');
+      } else {
+        document.getElementById('tab-reg-btn').classList.add('active');
+        document.getElementById('auth-reg-card').classList.remove('hidden');
+      }
+    };
+
+    window.updateRegFields = function() {
+      const role = document.getElementById('reg-role').value;
+      document.getElementById('reg-worker-fields').classList.add('hidden');
+      document.getElementById('reg-emp-fields').classList.add('hidden');
+      if (role === 'worker') document.getElementById('reg-worker-fields').classList.remove('hidden');
+      if (role === 'employer') document.getElementById('reg-emp-fields').classList.remove('hidden');
+    };
+
+    document.getElementById('login-id').addEventListener('input', (e) => {
+      const val = e.target.value.toUpperCase().trim();
+      if(val === "ADMIN") {
+        document.getElementById('otp-section').classList.add('hidden');
+        document.getElementById('admin-section').classList.remove('hidden');
+      } else if (val.startsWith("WRK-") || val.startsWith("CON-") || val.startsWith("EMP-")) {
+        document.getElementById('otp-section').classList.remove('hidden');
+        document.getElementById('admin-section').classList.add('hidden');
+      } else {
+        document.getElementById('otp-section').classList.add('hidden');
+        document.getElementById('admin-section').classList.add('hidden');
+      }
+    });
+
+    function determineRole(id) {
+      if (id === "ADMIN") state.role = "admin";
+      else if (id.startsWith("WRK-")) state.role = "worker";
+      else if (id.startsWith("CON-")) state.role = "contractor";
+      else if (id.startsWith("EMP-")) state.role = "employer";
+      else state.role = null;
+    }
+
+    // --- Authentication & Registration ---
+    document.getElementById('btn-register').addEventListener('click', () => {
+      const role = document.getElementById('reg-role').value;
+      const sheetName = role === 'worker' ? 'Workers' : role === 'contractor' ? 'Contractors' : 'Employers';
+      const name = document.getElementById('reg-name').value.trim();
+      const phone = document.getElementById('reg-phone').value.trim();
+      const dob = document.getElementById('reg-dob').value;
+      if (!name || !phone || !dob) return showToast('Fill name, phone, and dob', 'error');
+
+      if (!/^\d{10}$/.test(phone)) return showToast('Phone number must be exactly 10 digits.', 'error');
+      
+      const dobDate = new Date(dob);
+      if (isNaN(dobDate)) return showToast('Invalid Date of Birth', 'error');
+      const age = (new Date() - dobDate) / (1000 * 60 * 60 * 24 * 365.25);
+      if (age < 16) return showToast('User must be at least 16 years old to register.', 'error');
+
+      let record = { name, phone, dob, dt: getDDMMYY() };
+      if (role === 'worker') {
+        record.wage = document.getElementById('reg-wage').value;
+        record.skill = document.getElementById('reg-skill').value;
+      } else if (role === 'contractor') {
+        record.strikes = 0;
+      } else if (role === 'employer') {
+        const gstin = document.getElementById('reg-gstin').value.trim().toUpperCase();
+        if (gstin !== "N/A" && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gstin)) {
+           return showToast('Invalid GSTIN format. Example: 27AAAAA0000A1Z5 or N/A', 'error');
+        }
+        record.gstin = gstin;
+        record.status = 'Active';
+      }
+
+      document.getElementById('btn-register').innerText = 'REGISTERING...';
+      callBackend({ action: 'create', sheet: sheetName, record: record, authId: 'admin' })
+      .then(res => {
+        document.getElementById('btn-register').innerText = 'CONFIRM REGISTRATION';
+        showToast('Registered Successfully! Your ID is: ' + res.pid, 'success');
+        document.getElementById('login-id').value = res.pid;
+        toggleAuthMode('login');
+        document.getElementById('login-id').dispatchEvent(new Event('input'));
+      }).catch(err => {
+        document.getElementById('btn-register').innerText = 'CONFIRM REGISTRATION';
+        showToast('Registration failed: ' + err.message, 'error');
+      });
+    });
+
+    document.getElementById('btn-gen-otp').addEventListener('click', () => {
+      const id = document.getElementById('login-id').value.trim().toUpperCase();
+      if(!id) return showToast('Enter ID', 'error');
+      document.getElementById('btn-gen-otp').innerText = 'REQUESTING...';
+      
+      callBackend({action: 'request_otp', id: id})
+      .then(res => {
+        document.getElementById('btn-gen-otp').innerText = '✅ OTP DISPATCHED';
+        document.getElementById('btn-gen-otp').classList.add('btn-success');
+        document.getElementById('btn-gen-otp').classList.remove('btn-outline');
+      }).catch(err => {
+        document.getElementById('btn-gen-otp').innerText = 'GENERATE OTP';
+        showToast('Error: ' + err.message, 'error');
+      });
+    });
+
+    document.getElementById('btn-login').addEventListener('click', () => {
+      const id = document.getElementById('login-id').value.trim().toUpperCase();
+      determineRole(id);
+      if(!state.role) return showToast("Invalid ID format", 'error');
+      
+      document.getElementById('btn-login').innerText = 'VERIFYING...';
+      
+      if (state.role === "admin") {
+        const pass = document.getElementById('login-pass').value;
+        if(pass === "adminpass") {
+          state.id = "ADMIN";
+          state.token = "ADMIN_TOKEN";
+          setAuthData(state.id, state.token);
+          document.getElementById('btn-login').innerText = 'AUTHENTICATE';
+          showDashboard(state.role);
+        } else {
+          document.getElementById('btn-login').innerText = 'AUTHENTICATE';
+          showToast("ACCESS DENIED", 'error');
+        }
+      } else {
+        const otp = document.getElementById('login-otp').value.trim();
+        if(!otp) {
+          document.getElementById('btn-login').innerText = 'AUTHENTICATE';
+          return showToast('Enter OTP', 'error');
+        }
+        
+        callBackend({action: 'verify_otp', id: id, otp: otp})
+        .then(res => {
+          document.getElementById('btn-login').innerText = 'AUTHENTICATE';
+          state.id = id; 
+          state.token = res.token;
+          state.data = res.data; 
+          setAuthData(state.id, state.token);
+          showDashboard(state.role);
+        }).catch(err => {
+          document.getElementById('btn-login').innerText = 'AUTHENTICATE';
+          showToast('Error: ' + err.message, 'error');
+        });
+      }
+    });
+
+    document.querySelectorAll('.btn-logout').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const oldId = state.id;
+        const oldToken = state.token;
+        clearAuthData();
+        state.data = null;
+        document.querySelectorAll('.role-dashboard').forEach(d => d.classList.add('hidden'));
+        document.getElementById('login-view').classList.remove('hidden');
+        document.getElementById('app-header').innerText = 'ROJGAARRECORD ERP';
+        document.getElementById('login-id').value = '';
+        document.getElementById('login-otp').value = '';
+        document.getElementById('login-pass').value = '';
+        document.getElementById('otp-section').classList.add('hidden');
+        document.getElementById('admin-section').classList.add('hidden');
+        document.getElementById('btn-gen-otp').innerText = 'GENERATE OTP';
+        document.getElementById('btn-gen-otp').classList.remove('btn-success');
+        document.getElementById('btn-gen-otp').classList.add('btn-outline');
+        
+        // Notify backend to clear session and wipe Live_Dashboard
+        if (oldId && oldToken) {
+          callBackend({action: 'logout', id: oldId, token: oldToken}).catch(e => console.error(e));
+        }
+      });
+    });
+
+    // --- UI Routing & State ---
+    function showDashboard(role) {
+      document.getElementById('login-view').classList.add('hidden');
+      document.getElementById(`dashboard-${role}`).classList.remove('hidden');
+      document.getElementById('app-header').innerText = role === 'admin' ? 'ERP ADMIN CONSOLE' : `${role.toUpperCase()} PORTAL`;
+      
+      if (role !== "admin") {
+        if (state.data) {
+           renderRole(role);
+        } else {
+           document.getElementById('app-header').innerText = 'FETCHING DATABASE...';
+           fetchDirect(role, state.id, state.token)
+           .then(res => {
+             state.data = res;
+             document.getElementById('app-header').innerText = `${role.toUpperCase()} PORTAL`;
+             renderRole(role);
+           }).catch(err => {
+             showToast("Session error. Please re-login.", 'error');
+             clearAuthData(); location.reload();
+           });
+        }
+      } else {
+        triggerDynamicView('overview');
+      }
+    }
+
+    function renderRole(role) {
+       if (role === 'worker') initWorker();
+       else if (role === 'contractor') initContractor();
+       else if (role === 'employer') initEmployer();
+    }
+
+    window.switchTab = function(tabId, roleStr) {
+      const dash = document.getElementById(`dashboard-${roleStr}`);
+      dash.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      dash.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+      dash.querySelectorAll('.content').forEach(c => c.classList.add('hidden'));
+      document.getElementById(tabId).classList.remove('hidden');
+    };
+
+    function triggerDynamicView(viewName) {
+      callBackend({
+          action: 'load_dashboard_view', 
+          authRole: state.role, 
+          authId: state.id, 
+          authToken: state.token, 
+          viewName: viewName
+      }).catch(err => showToast("View Error: " + err.message, 'error'));
+    }
+
+    function reloadState() {
+      return fetchDirect(state.role, state.id, state.token).then(res => {
+        state.data = res;
+        renderRole(state.role);
+      });
+    }
+
+    // --- WORKER LOGIC ---
+    function initWorker() {
+      const p = (state.data.workers || [])[0] || {};
+      let recentAtt = (state.data.attendance || []).slice(-5).map(a => `[${formatDate(a.dt || a.timestamp)}] Site: ${a.siteId} - ${a.status} (${a.hours||'-'} hrs)`).join('<br>');
+      if (!recentAtt) recentAtt = 'No recent work history.';
+
+      document.getElementById('w-profile-details').innerHTML = `
+        <p><b>Worker ID:</b> ${p.id || state.id}</p>
+        <p><b>Name:</b> ${p.name || 'Unknown'}</p>
+        <p><b>Skill:</b> ${p.skill || 'Unskilled'}</p>
+        <p><b>Wage Basis:</b> ${p.wage || 'Daily'}</p>
+        <p><b>Phone:</b> ${p.phone || 'Unknown'}</p>
+        <div style="margin-top:1rem; padding-top:1rem; border-top:2px solid var(--border);">
+           <b>Recent Work History:</b><br>
+           <span style="font-size:0.8rem;">${recentAtt}</span>
+        </div>
+      `;
+      triggerDynamicView('attendance');
+      
+      state.sitesForClaims = state.data.sites || [];
+      const conSelect = document.getElementById('claim-contractor');
+      const uniqueCons = [...new Set(state.sitesForClaims.map(s => s.contractorId))];
+      conSelect.innerHTML = '<option value="">Select Contractor...</option>';
+      uniqueCons.forEach(c => { if (c) conSelect.innerHTML += `<option value="${c}">${c}</option>`; });
+    }
+    
+    document.getElementById('btn-w-history').addEventListener('click', () => triggerDynamicView('attendance'));
+    document.getElementById('btn-w-claims').addEventListener('click', () => triggerDynamicView('claims'));
+
+    document.getElementById('claim-contractor').addEventListener('change', (e) => {
+      const conId = e.target.value;
+      const siteSelect = document.getElementById('claim-site');
+      siteSelect.innerHTML = '<option value="">Select Site...</option>';
+      if (!conId) { siteSelect.disabled = true; return; }
+      siteSelect.disabled = false;
+      state.sitesForClaims.filter(s => s.contractorId === conId).forEach(s => {
+        siteSelect.innerHTML += `<option value="${s.id}">${s.name} (${s.id})</option>`;
+      });
+    });
+
+    document.getElementById('claim-type').addEventListener('change', (e) => {
+       const type = e.target.value;
+       const amtDiv = document.getElementById('claim-amt').parentElement;
+       if (type === "ATTENDANCE_DISPUTE") {
+          amtDiv.classList.add('hidden');
+          document.getElementById('claim-amt').value = "0";
+       } else {
+          amtDiv.classList.remove('hidden');
+       }
+    });
+
+    document.getElementById('btn-submit-claim').addEventListener('click', () => {
+      const conId = document.getElementById('claim-contractor').value;
+      const siteId = document.getElementById('claim-site').value;
+      const type = document.getElementById('claim-type').value;
+      const amt = document.getElementById('claim-amt').value;
+      if(!conId || !siteId || !amt) return showToast('Fill all claim fields completely.', 'error');
+      
+      document.getElementById('btn-submit-claim').innerText = 'SUBMITTING...';
+      const payload = { action: 'create', sheet: 'Claims', authId: state.id, authToken: state.token,
+        record: { type: "claim", workerId: state.id, wrk: state.id, contractorId: conId, con: conId, siteId: siteId, sid: siteId, claimType: type, amount: amt, status: "PENDING", dt: getDDMMYY() }
+      };
+      callBackend(payload).then(res => {
+        document.getElementById('btn-submit-claim').innerText = 'SUBMIT ASSERTION';
+        showToast('Claim Assertion Filed!', 'success');
+        reloadState();
+        triggerDynamicView('claims'); 
+      }).catch(err => {
+        document.getElementById('btn-submit-claim').innerText = 'SUBMIT ASSERTION';
+        showToast("Error: " + err.message, 'error');
+      });
+    });
+
+    // --- CONTRACTOR LOGIC ---
+    function initContractor() {
+      const p = (state.data.contractors || [])[0] || {};
+      const sites = state.data.sites || [];
+      const siteHtml = sites.map(s => `Site: ${s.id} (Employer: ${s.employer})`).join('<br>');
+
+      document.getElementById('c-profile-details').innerHTML = `
+          <h3>Identity Profile</h3>
+          <p><b>Contractor ID:</b> ${p.id || state.id}</p>
+          <p><b>Name:</b> ${p.name || 'Unknown'}</p>
+          <div style="margin-top:1rem; padding-top:1rem; border-top:2px solid var(--border);">
+             <b>Active Sites Delegated:</b><br>
+             <span style="font-size:0.8rem;">${siteHtml || 'None'}</span>
+          </div>
+      `;
+
+      let html = '<option value="">Select Site...</option>';
+      (state.data.sites || []).forEach(s => { html += `<option value="${s.id}">${s.name} (${s.id})</option>`; });
+      document.getElementById('in-site').innerHTML = html;
+      document.getElementById('pay-site').innerHTML = html;
+      document.getElementById('signoff-site').innerHTML = html;
+      
+      const claims = (state.data.claims || []).filter(c => c.status === "PENDING");
+      const list = document.getElementById('active-claims-list');
+      if (claims.length === 0) list.innerHTML = '<p>No active claims require your attention.</p>';
+      else {
+        let ch = '';
+        claims.forEach(c => {
+          ch += `<div style="border: 2px solid var(--border); padding: 1rem; margin-bottom: 1rem;">
+            <p><b>ID:</b> ${c.id} | <b>Date:</b> ${formatDate(c.timestamp)}</p>
+            <p><b>Worker:</b> ${c.workerId} | <b>Site:</b> ${c.siteId}</p>
+            <p><b>Type:</b> ${c.claimType} | <b>Amount:</b> ₹${c.amount}</p>
+            <div style="display:flex; gap:1rem; margin-top:1rem;">
+              <button class="btn btn-primary" style="margin:0;" onclick="resolveClaim('${c.id}', 'RESOLVED')">ACCEPT</button>
+              <button class="btn btn-outline" style="margin:0;" onclick="resolveClaim('${c.id}', 'DISPUTED')">REJECT</button>
+            </div>
+          </div>`;
+        });
+        list.innerHTML = ch;
+      }
+      triggerDynamicView('active_workers');
+    }
+
+    document.getElementById('btn-c-workers').addEventListener('click', () => triggerDynamicView('active_workers'));
+    document.getElementById('btn-c-accounts').addEventListener('click', () => triggerDynamicView('accounts'));
+    document.getElementById('btn-c-history').addEventListener('click', () => triggerDynamicView('history'));
+
+    // NEW: CLOCK IN WORKER
+    document.getElementById('btn-clock-in').addEventListener('click', () => {
+      const wrkId = document.getElementById('in-worker-id').value.trim().toUpperCase();
+      const siteId = document.getElementById('in-site').value;
+      if(!wrkId || !siteId) return showToast('Enter Worker ID and Site');
+      
+      document.getElementById('btn-clock-in').innerText = 'CLOCKING IN...';
+      const payload = { action: "create", sheet: "Attendance", authId: state.id, authToken: state.token, 
+          record: { workerId: wrkId, wrk: wrkId, siteId: siteId, sid: siteId, contractorId: state.id, con: state.id, timestamp: getDDMMYY(), dt: getDDMMYY(), status: "Checked In" } };
+      
+      callBackend(payload).then(res => {
+        document.getElementById('btn-clock-in').innerText = 'CLOCK IN (ATTENDANCE IN)';
+        showToast('Worker successfully checked in to site!');
+        document.getElementById('in-worker-id').value = '';
+        reloadState();
+        triggerDynamicView('active_workers');
+      }).catch(err => {
+        document.getElementById('btn-clock-in').innerText = 'CLOCK IN (ATTENDANCE IN)';
+        showToast("Error: " + err.message);
+      });
+    });
+
+    document.getElementById('btn-req-pay-otp').addEventListener('click', () => {
+      const wrkId = document.getElementById('pay-worker-id').value.trim();
+      const siteId = document.getElementById('pay-site').value;
+      const amt = document.getElementById('pay-amt').value;
+      if(!wrkId || !siteId || !amt) return showToast('Enter Worker ID, select Site, and enter Amount');
+      document.getElementById('btn-req-pay-otp').innerText = 'SENDING...';
+      const payload = { action: "generate_payment_otp", workerId: wrkId, siteId: siteId, amount: amt, authId: state.id, authToken: state.token };
+      
+      callBackend(payload).then(res => {
+        document.getElementById('btn-req-pay-otp').classList.add('hidden');
+        document.getElementById('div-pay-verify').classList.remove('hidden');
+        showToast('OTP Sent to worker phone!');
+      }).catch(err => {
+        document.getElementById('btn-req-pay-otp').innerText = 'REQUEST WORKER OTP';
+        showToast("Error: " + err.message);
+      });
+    });
+
+    document.getElementById('btn-exec-pay').addEventListener('click', () => {
+      const wrkId = document.getElementById('pay-worker-id').value.trim();
+      const siteId = document.getElementById('pay-site').value;
+      const amt = document.getElementById('pay-amt').value;
+      const otp = document.getElementById('pay-otp').value;
+      if(!siteId || otp.length !== 4) return showToast('Select Site and enter 4-digit OTP');
+      
+      let hours = 8; // Default
+      const atts = state.data.attendance || [];
+      let checkInTime = null;
+      for (let i = atts.length - 1; i >= 0; i--) {
+         if (atts[i].workerId === wrkId && atts[i].siteId === siteId && atts[i].status === "Checked In") {
+             checkInTime = Number(atts[i].timestamp || atts[i].dt);
+             break;
+         }
+      }
+      if (checkInTime) {
+         let diffMs = Date.now() - checkInTime;
+         hours = Math.max(1, Math.round(diffMs / (1000 * 60 * 60)));
+      }
+      
+      document.getElementById('btn-exec-pay').innerText = 'VERIFYING...';
+      
+      const payload = { action: "verify_payment_otp", workerId: wrkId, wrk: wrkId, siteId: siteId, sid: siteId, amount: amt, otp: otp, hours: hours, authId: state.id, authToken: state.token };
+      callBackend(payload).then(res => {
+        showToast('Payment Verified & Worker Clocked Out!');
+        document.getElementById('btn-exec-pay').innerText = 'VERIFY & MARK OUT';
+        document.getElementById('btn-req-pay-otp').classList.remove('hidden');
+        document.getElementById('div-pay-verify').classList.add('hidden');
+        document.getElementById('pay-worker-id').value = '';
+        document.getElementById('btn-req-pay-otp').innerText = 'REQUEST WORKER OTP';
+        reloadState();
+      }).catch(err => {
+        document.getElementById('btn-exec-pay').innerText = 'VERIFY & MARK OUT';
+        showToast("Error: " + err.message);
+      });
+    });
+
+    document.getElementById('btn-signoff').addEventListener('click', () => {
+      const siteId = document.getElementById('signoff-site').value;
+      if(!siteId) return showToast('Select a site');
+      const payload = { action: 'create', sheet: 'EODSignoffs', authId: state.id, authToken: state.token, record: { siteId: siteId, sid: siteId, contractorId: state.id, con: state.id, timestamp: getDDMMYY(), dt: getDDMMYY() } };
+      callBackend(payload).then(res => {
+        showToast('EOD Signoff Transaction Committed!');
+      }).catch(err => showToast("Error: " + err.message));
+    });
+
+    window.resolveClaim = (claimId, newStatus) => {
+      if(!confirm(`Mark claim as ${newStatus}?`)) return;
+      const payload = { action: 'update', sheet: 'Claims', pid: claimId, authId: state.id, authToken: state.token, record: { type: "resolution", status: newStatus, claim_id: claimId, action: newStatus, resp_by: state.id, dt: getDDMMYY() } };
+      callBackend(payload).then(res => reloadState()).catch(err => showToast("Error: " + err.message));
+    };
+
+    // --- EMPLOYER LOGIC ---
+    function initEmployer() {
+      let html = '<option value="">Select Site...</option>';
+      (state.data.sites || []).forEach(s => { html += `<option value="${s.id}">${s.name} (${s.id})</option>`; });
+      document.getElementById('e-con-site').innerHTML = html;
+      
+      const claims = (state.data.claims || []).filter(c => c.status === "DISPUTED");
+      const list = document.getElementById('disputes-list');
+      if (claims.length === 0) list.innerHTML = '<p>No disputed assertions require override.</p>';
+      else {
+        let ch = '';
+        claims.forEach(c => {
+          ch += `<div style="border: 2px solid var(--border); padding: 1rem; margin-bottom: 1rem;">
+            <p><b>ID:</b> ${c.id}</p><p><b>Worker:</b> ${c.workerId} | <b>Contractor:</b> ${c.contractorId}</p>
+            <p><b>Type:</b> ${c.claimType} | <b>Amount:</b> ₹${c.amount}</p>
+            <button class="btn btn-primary" style="margin-top:1rem;" onclick="overrideClaim('${c.id}')">OVERRIDE (Force Resolve)</button>
+          </div>`;
+        });
+        list.innerHTML = ch;
+      }
+      triggerDynamicView('sites');
+    }
+
+    document.getElementById('btn-e-sites').addEventListener('click', () => triggerDynamicView('sites'));
+    document.getElementById('btn-e-daily').addEventListener('click', () => triggerDynamicView('daily_ops'));
+
+    document.getElementById('btn-add-site').addEventListener('click', () => {
+      const name = document.getElementById('site-name').value;
+      const loc = document.getElementById('site-loc').value;
+      const size = document.getElementById('site-size').value;
+      if(!name || !loc || !size) return showToast('Fill all fields');
+      const payload = { action: 'create', sheet: 'Sites', authId: state.id, authToken: state.token, record: { name: name, location: loc, size: size, employer: state.id, emp: state.id, status: "Active", dt: getDDMMYY() } };
+      document.getElementById('btn-add-site').innerText = 'COMMITTING...';
+      callBackend(payload).then(res => {
+        showToast('Site Registered!');
+        document.getElementById('site-name').value = '';
+        document.getElementById('site-loc').value = '';
+        document.getElementById('site-size').value = '';
+        document.getElementById('btn-add-site').innerText = 'Commit Site Registration';
+        reloadState();
+      }).catch(err => {
+        document.getElementById('btn-add-site').innerText = 'Commit Site Registration';
+        showToast("Error: " + err.message);
+      });
+    });
+
+    document.getElementById('btn-award').addEventListener('click', () => {
+      const conId = document.getElementById('e-con-id').value.trim().toUpperCase();
+      const siteId = document.getElementById('e-con-site').value;
+      if(!conId || !siteId) return showToast('Fill all fields');
+      const payload = { action: 'update', sheet: 'Sites', pid: siteId, authId: state.id, authToken: state.token, record: { contractorId: conId, con: conId, emp: state.id, sid: siteId, dt: getDDMMYY() } };
+      document.getElementById('btn-award').innerText = 'DELEGATING...';
+      callBackend(payload).then(res => {
+        showToast('Contractor Mandate Delegated!'); 
+        document.getElementById('btn-award').innerText = 'Delegate Authority';
+        reloadState();
+      }).catch(err => {
+        document.getElementById('btn-award').innerText = 'Delegate Authority';
+        showToast("Error: " + err.message);
+      });
+    });
+
+    window.overrideClaim = (claimId) => {
+      if(!confirm(`OVERRIDE and force resolve this dispute?`)) return;
+      const payload = { action: 'update', sheet: 'Claims', pid: claimId, authId: state.id, authToken: state.token, record: { type: "resolution", status: "RESOLVED (OVERRIDDEN BY EMPLOYER)", claim_id: claimId, action: "RESOLVED", resp_by: state.id, dt: getDDMMYY() } };
+      callBackend(payload).then(res => reloadState()).catch(err => showToast("Error: " + err.message));
+    };
+
+    // --- ADMIN LOGIC ---
+    document.getElementById('btn-a-overview').addEventListener('click', () => triggerDynamicView('overview'));
+    document.getElementById('btn-a-disputes').addEventListener('click', () => triggerDynamicView('disputes'));
+
+    document.getElementById('btn-wipe').addEventListener('click', () => {
+      const confirmText = document.getElementById('wipe-confirm').value;
+      if (confirmText !== "RESET_CONFIRM") return showToast("Aborted. Incorrect confirmation phrase.");
+      if (!confirm("WARNING: This will permanently wipe all users and transactions. Proceed?")) return;
+      document.getElementById('btn-wipe').innerText = "WIPING...";
+      callBackend({ action: "wipe_all" }).then(res => {
+        showToast("Data Reset Completed.");
+        document.getElementById('btn-wipe').innerText = "Execute Data Reset";
+        document.getElementById('wipe-confirm').value = "";
+      }).catch(err => showToast("Wipe failed: " + err.message));
+    });
+  </script>
+</body>
+</html>
